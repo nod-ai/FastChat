@@ -145,6 +145,16 @@ def load_model(
     return model, tokenizer
 
 
+# An idea for perhaps compiling the 0-th iteration's Vicuna model.
+# This seems pretty ugly though.
+# The other idea is if we can get the dyanmic shape lowering itself.
+class FirstVicuna(torch.nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+    def forward(self, input_ids):
+        return self.model(input_ids)
+
 @torch.inference_mode()
 def generate_stream(
     model, tokenizer, params, device, context_len=2048, stream_interval=2
@@ -165,10 +175,18 @@ def generate_stream(
 
     for i in range(max_new_tokens):
         if i == 0:
+            # print("DB 0 => model.config.is_encoder_decoder => ", str(model.config.is_encoder_decoder))
             if model.config.is_encoder_decoder:
+                # print("DB 0.1 => input_ids for mode.encoder and model.forward => ", str(torch.as_tensor([input_ids], device=device)))
+                # print("DB 0.1 => it's shape is => ", str(torch.as_tensor([input_ids], device=device).shape))
+                # print("DB 0.1 => decoder_input_ids for model.forward => ", str(torch.as_tensor([[model.generation_config.decoder_start_token_id]],device=device,)))
+                # print("DB 0.1 => it's shape is => ", str(torch.as_tensor([[model.generation_config.decoder_start_token_id]],device=device,).shape))
+                
                 encoder_outputs = model.encoder(
                     input_ids=torch.as_tensor([input_ids], device=device)
                 )
+                # print("DB 0.1 => encoder_outputs => ", str(encoder_outputs))
+                # print("DB 0.1 => it's shape is => ", str(encoder_outputs.shape))
                 out = model(
                     torch.as_tensor([input_ids], device=device),
                     decoder_input_ids=torch.as_tensor(
@@ -181,11 +199,24 @@ def generate_stream(
                 logits = out.logits
                 past_key_values = out.past_key_values
             else:
+                # print("DB 0.2 => input_ids for mode.forward => ", str(torch.as_tensor([input_ids], device=device)))
+                # print("DB 0.2 => it's shape is => ", str(torch.as_tensor([input_ids], device=device).shape))
+
                 out = model(torch.as_tensor([input_ids], device=device), use_cache=True)
                 logits = out.logits
                 past_key_values = out.past_key_values
         else:
+            # print("DB 1 => model.config.is_encoder_decoder => ", str(model.config.is_encoder_decoder))
             if model.config.is_encoder_decoder:
+                # print("DB 1.1 => input_ids for model.forward => ", str(torch.as_tensor([input_ids], device=device)))
+                # print("DB 1.1 => it's shape is => ", str(torch.as_tensor([input_ids], device=device).shape))
+                # print("DB 1.1 => decoder_input_ids for model.forward => ", str(torch.as_tensor([[token]],device=device,)))
+                # print("DB 1.1 => it's shape is => ", str(torch.as_tensor([[token]],device=device,).shape))
+                # print("DB 1.1 => encoder_outputs => ", str(encoder_outputs))
+                # print("DB 1.1 => it's shape is => ", str(encoder_outputs.shape))
+                # print("DB 1.1 => past_key_values => ", str(past_key_values))
+                # print("DB 1.1 => it's shape is => ", str(past_key_values.shape))
+                
                 out = model(
                     input_ids=torch.as_tensor([input_ids], device=device),
                     use_cache=True,
@@ -196,6 +227,11 @@ def generate_stream(
                 logits = out.logits
                 past_key_values = out.past_key_values
             else:
+                # print("DB 1.2 => input_ids for model.forward => ", str(torch.as_tensor([[token]], device=device)))
+                # print("DB 1.2 => it's shape is => ", str(torch.as_tensor([[token]], device=device).shape))
+                # print("DB 1.2 => past_key_values => ", str(past_key_values))
+                # print("DB 1.2 => it's shape is => ", str(len(past_key_values)))
+                
                 out = model(
                     input_ids=torch.as_tensor([[token]], device=device),
                     use_cache=True,
@@ -306,6 +342,7 @@ def chat_loop(
         }
 
         chatio.prompt_for_output(conv.roles[1])
+        firstVicuna = FirstVicuna(model)
         output_stream = generate_stream_func(model, tokenizer, params, device)
         outputs = chatio.stream_output(output_stream, skip_echo_len)
         # NOTE: strip is important to align with the training data.

@@ -461,7 +461,7 @@ def build_demo():
             parameter_row,
         ) = build_single_model_ui()
 
-        if args.model_list_mode == "once":
+        if True or args.model_list_mode == "once":
             demo.load(
                 load_demo,
                 [url_params],
@@ -485,7 +485,7 @@ def build_demo():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="0.0.0.0")
-    parser.add_argument("--port", type=int)
+    parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--controller-url", type=str, default="http://localhost:21001")
     parser.add_argument("--concurrency-count", type=int, default=10)
     parser.add_argument(

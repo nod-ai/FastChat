@@ -148,12 +148,7 @@ def load_model(
 # An idea for perhaps compiling the 0-th iteration's Vicuna model.
 # This seems pretty ugly though.
 # The other idea is if we can get the dyanmic shape lowering itself.
-class FirstVicuna(torch.nn.Module):
-    def __init__(self, model):
-        super().__init__()
-        self.model = model
-    def forward(self, input_ids):
-        return self.model(input_ids)
+
 
 @torch.inference_mode()
 def generate_stream(
@@ -287,6 +282,42 @@ class ChatIO(abc.ABC):
     def stream_output(self, output_stream, skip_echo_len: int):
         """Stream output."""
 
+# class FirstVicuna(torch.nn.Module):
+#     def __init__(self, model):
+#         super().__init__()
+#         self.model = model
+#     def forward(self, input_ids):
+#         return self.model(input_ids)
+    
+# def compile_and_fetch(model, tokenizer, prompt, device):
+#     from shark import shark_importer
+#     import torch
+#     from torch.fx.experimental.proxy_tensor import make_fx
+#     from torch._decomp import get_decompositions
+#     from typing import List
+
+#     firstVicuna = FirstVicuna(model)
+#     input_ids = tokenizer(prompt).input_ids
+#     firstVicunaInput = torch.as_tensor([input_ids], device=device)
+#     fx_g = make_fx(
+#         firstVicuna,
+#         decomposition_table=get_decompositions(
+#             [
+#                 torch.ops.aten.embedding_dense_backward,
+#                 torch.ops.aten.native_layer_norm_backward,
+#                 torch.ops.aten.slice_backward,
+#                 torch.ops.aten.select_backward,
+#                 torch.ops.aten.norm.ScalarOpt_dim,
+#                 torch.ops.aten.native_group_norm,
+#                 torch.ops.aten.upsample_bilinear2d.vec,
+#                 torch.ops.aten.split.Tensor,
+#                 torch.ops.aten.split_with_sizes,
+#             ]
+#         ),
+#     )(firstVicunaInput)
+#     print("Got FX_G")
+#     return firstVicuna
+
 
 def chat_loop(
     model_path: str,
@@ -342,7 +373,9 @@ def chat_loop(
         }
 
         chatio.prompt_for_output(conv.roles[1])
-        firstVicuna = FirstVicuna(model)
+
+        # firstVicuna = compile_and_fetch(model, tokenizer, prompt, device)
+
         output_stream = generate_stream_func(model, tokenizer, params, device)
         outputs = chatio.stream_output(output_stream, skip_echo_len)
         # NOTE: strip is important to align with the training data.

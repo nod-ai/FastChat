@@ -136,19 +136,19 @@ def compile_vicuna(model, model_inputs, model_vmfb_name):
     module.operation.write_bytecode(bytecode_stream)
     bytecode = bytecode_stream.getvalue()
 
-    from shark.shark_inference import SharkInference
-    shark_module = SharkInference(
+    from amdshark.amdshark_inference import AMDSharkInference
+    amdshark_module = AMDSharkInference(
         mlir_module=bytecode, device="cuda", mlir_dialect="tm_tensor"
     )
-    shark_module.compile()
+    amdshark_module.compile()
 
     import os
-    path = shark_module.save_module(
+    path = amdshark_module.save_module(
         os.getcwd(), model_vmfb_name, []
     )
     print("Saved vmfb at ", str(path))
 
-    return shark_module
+    return amdshark_module
 
 
 kwargs = {"torch_dtype": torch.float32}
@@ -176,8 +176,8 @@ input_ids = tokenizer(prompt).input_ids
 print("Got input_ids from the tokenizer")
 firstVicunaInput = tuple([torch.as_tensor([input_ids], device=torch.device("cpu"))])
 
-shark_first_vicuna = compile_vicuna(firstVicuna, firstVicunaInput, "first_vicuna")
-# output_first_vicuna = shark_first_vicuna("forward", (input_ids,))
+amdshark_first_vicuna = compile_vicuna(firstVicuna, firstVicunaInput, "first_vicuna")
+# output_first_vicuna = amdshark_first_vicuna("forward", (input_ids,))
 
 # Uncomment this after verifying that SecondVicuna compiles as well.
 # Might have to cast to_numpy.

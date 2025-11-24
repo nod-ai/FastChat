@@ -290,7 +290,7 @@ class ChatIO(abc.ABC):
 #         return self.model(input_ids)
     
 # def compile_and_fetch(model, tokenizer, prompt, device):
-#     from shark import shark_importer
+#     from amdshark import amdshark_importer
 #     import torch
 #     from torch.fx.experimental.proxy_tensor import make_fx
 #     from torch._decomp import get_decompositions
